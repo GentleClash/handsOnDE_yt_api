@@ -1,6 +1,7 @@
 responses/
 data/raw
 data/processed
+exploration/data
 
 
 # Byte-compiled / optimized / DLL files

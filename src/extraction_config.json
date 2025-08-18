@@ -1,0 +1,15 @@
+{
+    "BASE_URL": "https://www.googleapis.com/youtube/v3",
+    "endpoint": "/videos",
+    "DIR": "data/raw/extract/",
+    "TREND_LIST_PARAMETERS": {
+        "part": "snippet",
+        "chart": "mostPopular",
+        "regionCode": "IN"
+    },
+
+    "VIDEO_DETAILS_PARAMETER": {
+        "part": "snippet,contentDetails,statistics",
+        "id": ""
+    }
+}
