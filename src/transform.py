@@ -56,14 +56,15 @@ class Transform:
         else:
             # Find the latest file matching the pattern
             pattern = f"{self.file_prefix}*.json"
-            matching_files = list(self.raw_data_path.glob(pattern))
+            script_dir = Path(__file__).parent
+            resolved_path = (script_dir / self.raw_data_path).resolve()
+            matching_files = list(resolved_path.glob(pattern))
             
             if not matching_files:
-                raise FileNotFoundError(f"No files found matching pattern: {pattern}")
+                raise FileNotFoundError(f"No files found matching pattern: {pattern} in directory: {resolved_path}")
             
             # Sort by filename to get the latest timestamp
             file_path = sorted(matching_files)[-1]
-        
         if not file_path.exists():
             raise FileNotFoundError(f"File not found: {file_path}")
         
@@ -101,7 +102,6 @@ class Transform:
         
         # Rename columns to final format
         trend_ids.rename(columns={
-            'video_id': 'id',
             'root_kind': 'kind',
             'root_etag': 'etag',
             'root_nextPageToken': 'nextPageToken',
@@ -110,7 +110,7 @@ class Transform:
         
         # Apply data type conversions
         trend_ids = trend_ids.astype({
-            'id': 'string[pyarrow]',
+            'video_id': 'string[pyarrow]',
             'etag': 'string[pyarrow]',
             'nextPageToken': 'string[pyarrow]',
             'prevPageToken': 'string[pyarrow]',
@@ -146,6 +146,7 @@ class Transform:
         # Rename columns
         videos = videos.rename(columns={
             'snippet.publishedAt': 'published_at',
+            'snippet.title': 'title',
             'snippet.channelId': 'channel_id',
             'snippet.thumbnails.default.url': 'thumbnail_url',
             'snippet.channelTitle': 'channel_title',
@@ -223,8 +224,15 @@ class Transform:
         self.load_json_file(filename)
         trend_ids = self.extract_trend_ids()
         videos_clean = self.extract_video_details()
-        
-        return trend_ids, videos_clean
+
+        self.trend_ids = trend_ids.merge(
+            videos_clean[['id', 'view_count']],
+            left_on='video_id',
+            right_on='id',
+            how='left'
+        ).drop(columns=['id'])
+
+        return self.trend_ids.copy(), videos_clean
     
     def save_processed_data(self, output_path: str | Path = "../data/processed/", 
                           file_suffix: Optional[str] = None,
@@ -247,12 +255,15 @@ class Transform:
             file_suffix = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
         
         # Save trend IDs
-        trend_ids_path = output_path / f"trend_ids_{file_suffix}.parquet"
+        if format==None:
+            format = 'parquet'
+            
+        trend_ids_path = output_path / f"trend_ids_{file_suffix}.{format}"
 
         temp_trend_ids = self.trend_ids.copy()
 
         # Save video details
-        videos_path = output_path / f"video_details_{file_suffix}.parquet"
+        videos_path = output_path / f"video_details_{file_suffix}.{format}"
 
         # Convert sparse column to dense before saving
         temp_videos_clean = self.videos_clean.copy()
@@ -276,7 +287,7 @@ if __name__ == "__main__":
     transformer = Transform()
     
     # Process specific file
-    trend_ids, videos = transformer.process_all("complete_extraction_2025_08_16_10_36_41.json")
+    trend_ids, videos = transformer.process_all()
     
     # Display info about processed data
     print("Trend IDs shape:", trend_ids.shape)

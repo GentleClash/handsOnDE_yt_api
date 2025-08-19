@@ -286,7 +286,7 @@ if __name__ == "__main__":
         extractor = Extract(config_file=config_file_path)
 
         # Option 1: Run complete extraction
-        results = extractor.extract_all()
+        results = extractor.extract_all(save_dir="../data/raw/extract/")
         print(f"Extraction complete! Found {results['total_videos']} videos")
         
         # Option 2: Step by step
