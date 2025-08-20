@@ -1,0 +1,29 @@
+{
+    "trend": {
+        "video_id": "string[pyarrow]",
+        "etag": "string[pyarrow]",
+        "nextPageToken": "string[pyarrow]",
+        "prevPageToken": "string[pyarrow]",
+        "kind": "category",
+        "first_appearance_date": "date32[pyarrow]"
+    },
+    "videos": {
+        "kind": "category",
+        "etag": "string[pyarrow]",
+        "id": "string[pyarrow]",
+        "published_at": "date32[pyarrow]",
+        "title": "string[pyarrow]",
+        "channel_id": "string[pyarrow]",
+        "thumbnail_url": "string[pyarrow]",
+        "channel_title": "string[pyarrow]",
+        "category_id": "category",
+        "localized_title": "string[pyarrow]",
+        "localized_description": "string[pyarrow]",
+        "duration": "float32[pyarrow]",
+        "default_language": "category",
+        "view_count": "Int64[pyarrow]",
+        "like_count": "Int64[pyarrow]",
+        "comment_count": "Int32[pyarrow]",
+        "favorite_count": "sparse[int32]"
+    }
+}
