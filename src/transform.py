@@ -17,7 +17,7 @@ class Transform:
     from raw JSON data files with timestamp-based naming conventions.
     """
     
-    def __init__(self, raw_data_path: str = "../data/raw/extract/", 
+    def __init__(self, raw_data_path: Optional[str] = None, 
                  file_prefix: str = "complete_extraction_"):
         """
         Initialize the Transform class.
@@ -26,7 +26,7 @@ class Transform:
             raw_data_path (str): Path to the directory containing raw JSON files
             file_prefix (str): Prefix for the JSON files to process
         """
-        self.raw_data_path = Path(raw_data_path)
+        self.raw_data_path = Path(raw_data_path) if raw_data_path else Path("../data/raw/extract/")
         self.file_prefix = file_prefix
         self.complete_details = None
         self.trend_ids = None
@@ -56,8 +56,7 @@ class Transform:
         else:
             # Find the latest file matching the pattern
             pattern = f"{self.file_prefix}*.json"
-            script_dir = Path(__file__).parent
-            resolved_path = (script_dir / self.raw_data_path).resolve()
+            resolved_path = self.raw_data_path.resolve()
             matching_files = list(resolved_path.glob(pattern))
             
             if not matching_files:
@@ -137,7 +136,15 @@ class Transform:
         if self.complete_details is None:
             raise ValueError("No data loaded. Call load_json_file() first.")
         
-        response_details = self.complete_details["video_details"][0]
+        # Combine all batches of video details
+        all_response_details = []
+        for batch in self.complete_details["video_details"]:
+            if 'items' in batch:
+                all_response_details.extend(batch['items'])
+        
+        response_details = {'items': all_response_details}
+
+
         videos = response_details['items']
         
         # Normalize video data
