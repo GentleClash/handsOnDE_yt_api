@@ -4,7 +4,7 @@
 1. [x] Extract
 2. [x] Transform
 3. [x] Basic Load 
-4. [ ] Dashboard
+4. [x] Dashboard (#to do engagement rate {remove empty categories})
 5. [ ] Time Series Analysis
 6. [ ] Categorical Analysis
 7. [ ] Channel Analysis

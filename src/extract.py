@@ -283,7 +283,7 @@ class Extract:
 if __name__ == "__main__":
     try:
         config_file_path = "extraction_config.json"
-        extractor = Extract(config_file=config_file_path)
+        extractor = Extract(config_file=config_file_path, max_pages=15)
 
         # Option 1: Run complete extraction
         results = extractor.extract_all(save_dir="../data/raw/extract/")
