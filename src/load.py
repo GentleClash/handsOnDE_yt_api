@@ -77,7 +77,7 @@ class YouTubeDataLoader:
     def _default_db_config(self) -> Dict[str, str]:
         """Default database configuration for local PostgreSQL."""
         return {
-            'host': 'localhost',
+            'host': 'postgres',
             'port': '5432',
             'dbname': 'youtube_analytics',
             'user': 'postgres',

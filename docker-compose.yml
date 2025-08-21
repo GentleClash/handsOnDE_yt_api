@@ -13,12 +13,33 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init-db:/docker-entrypoint-initdb.d:ro
+      - ./init-db:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d youtube_analytics"]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - youtube_analytics_network
+
+  etl:
+    build:
+      context: .
+      dockerfile: Dockerfile.etl
+    container_name: youtube_analytics_etl
+    restart: "no"  
+    volumes:
+      - ./src:/app/src
+      - ./data:/app/data
+      - ./main.py:/app/main.py
+      - ./db_config.json:/app/db_config.json
+      - ./src/extraction_config.json:/app/src/extraction_config.json
+    environment:
+      - PYTHONPATH=/app
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - youtube_analytics_network
 
@@ -44,32 +65,10 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      etl:
+        condition: service_completed_successfully  # Wait for ETL to complete
     networks:
       - youtube_analytics_network
-
-  # Data Processing Service
-  etl:
-    build:
-      context: .
-      dockerfile: Dockerfile.etl
-    container_name: youtube_analytics_etl
-    restart: "no"  
-    volumes:
-      - ./src:/app/src
-      - ./data:/app/data
-      - ./main.py:/app/main.py
-      - ./db_config.json:/app/db_config.json
-      - ./src/extraction_config.json:/app/src/extraction_config.json
-    environment:
-      - PYTHONPATH=/app
-      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - youtube_analytics_network
-    profiles:
-      - etl  
 
 volumes:
   postgres_data:
