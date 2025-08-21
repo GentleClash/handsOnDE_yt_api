@@ -93,8 +93,10 @@ if __name__ == "__main__":
     except FileNotFoundError:
         print("Database configuration file not found.")
         db_config = json.loads(os.getenv("DB_CONFIG", "{}"))
-
-
+    except json.JSONDecodeError:
+        print("Error decoding JSON from database configuration.")
+        db_config = json.loads(os.getenv("DB_CONFIG", "{}"))
+        
     GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
     if not GOOGLE_API_KEY:
         print("GOOGLE_API_KEY environment variable not set.")
