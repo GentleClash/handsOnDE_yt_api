@@ -1,0 +1,79 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: youtube_analytics_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: youtube_analytics
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=scram-sha-256"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d youtube_analytics"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - youtube_analytics_network
+
+  # Streamlit Dashboard
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile.dashboard
+    container_name: youtube_analytics_dashboard
+    restart: unless-stopped
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./dashboard.py:/app/dashboard.py
+      - ./data:/app/data
+      - ./src:/app/src
+      - ./db_config.json:/app/db_config.json
+    environment:
+      - STREAMLIT_SERVER_PORT=8501
+      - STREAMLIT_SERVER_ADDRESS=0.0.0.0
+      - STREAMLIT_SERVER_HEADLESS=true
+      - STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - youtube_analytics_network
+
+  # Data Processing Service
+  etl:
+    build:
+      context: .
+      dockerfile: Dockerfile.etl
+    container_name: youtube_analytics_etl
+    restart: "no"  
+    volumes:
+      - ./src:/app/src
+      - ./data:/app/data
+      - ./main.py:/app/main.py
+      - ./db_config.json:/app/db_config.json
+      - ./src/extraction_config.json:/app/src/extraction_config.json
+    environment:
+      - PYTHONPATH=/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - youtube_analytics_network
+    profiles:
+      - etl  
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  youtube_analytics_network:
+    driver: bridge
