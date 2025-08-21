@@ -1,5 +1,6 @@
 import logging
 import json
+import os
 from src.extract import Extract
 from src.transform import Transform
 from src.load import YouTubeDataLoader
@@ -16,40 +17,91 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-# Extract
-extraction_config = None
-with open("src/extraction_config.json") as f:
-    extraction_config = json.load(f)
 
-extractor = Extract(extraction_config, max_pages=15)
-raw_data = extractor.extract_all()
-
-# Transform
-transformer = Transform( "data/raw/extract/")
-trend_ids, videos = transformer.process_all()
-
-transformer.save_processed_data("data/processed/", format="parquet")
-print(f"Processed {len(videos)} videos with {len(trend_ids)} unique trend IDs.")
-
-
-# Load
-
-with open("db_config.json") as f:
-    custom_db_config = json.load(f)
-
-try:
-    loader = YouTubeDataLoader(processed_data_path="data/processed/", db_config=custom_db_config)
-    loader.load_to_database()
-
-# pg server not running
-except ConnectionRefusedError:
-    logger.error("Connection to PostgreSQL server refused. Please ensure the server is running and the credentials are correct.")
-
-# directory not found
-except FileNotFoundError:
-    logger.error(f"Processed data directory data/processed/ not found.")
-# other errors
-except Exception as e:
-    logger.error(f"Error loading data: {e}")
+class YoutubeETLPipeline:
+    from typing import Dict
+    def __init__(self, extraction_config: Dict[str, str], 
+                 db_config: Dict[str, str], 
+                 max_pages: int,
+                 GOOGLE_API_KEY: str
+                 ) -> None:
+        """
+        Args:
+            extraction_config (Dict[str, str]): Configuration for data extraction.
+            db_config (Dict[str, str]): Configuration for the database connection.
+            max_pages (int): Maximum number of pages to extract (Each page contains 5 videos)
+            GOOGLE_API_KEY (str): Google API key for authentication.
+        """
 
 
+        self.extraction_config = extraction_config
+        self.db_config = db_config
+        self.max_pages = max_pages
+        self.GOOGLE_API_KEY = GOOGLE_API_KEY
+
+    def run(self) -> None:
+        # Extract
+        try:
+            logger.info("Starting data extraction...")
+            extractor = Extract(self.extraction_config, max_pages=self.max_pages, GOOGLE_API_KEY=self.GOOGLE_API_KEY)
+            raw_data = extractor.extract_all()
+        except Exception as e:
+            logger.error(f"Error during extraction: {e}")
+            return
+
+        # Transform
+        try:
+            transformer = Transform("data/raw/extract/")
+            trends, videos = transformer.process_all()
+            transformer.save_processed_data("data/processed/", format="parquet")
+        except Exception as e:
+            logger.error(f"Error during transformation: {e}")
+            return
+        # Load
+        try:
+            logger.info("Starting data loading...")
+            loader = YouTubeDataLoader(processed_data_path="data/processed/", db_config=self.db_config)
+            loader.load_to_database()
+            logger.info("Data loading completed successfully.")
+        except ConnectionRefusedError:
+            logger.error("Connection to PostgreSQL server refused. Please ensure the server is running and the credentials are correct.")
+        except FileNotFoundError:
+            logger.error(f"Processed data directory data/processed/ not found.")
+        except Exception as e:
+            logger.error(f"Error during loading: {e}")
+
+
+if __name__ == "__main__":
+    from dotenv import load_dotenv
+    load_dotenv()
+
+
+    extraction_config = None
+    try:
+        with open("src/extraction_config.json") as f:
+            extraction_config = json.load(f)
+    except FileNotFoundError:
+        print("Extraction configuration file not found.")
+        exit()
+
+    db_config = None
+    try:
+        with open("db_config.json") as f:
+            db_config = json.load(f)
+    except FileNotFoundError:
+        print("Database configuration file not found.")
+        exit()
+
+
+    GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+    if not GOOGLE_API_KEY:
+        print("GOOGLE_API_KEY environment variable not set.")
+        exit()
+
+    pipeline = YoutubeETLPipeline(
+        extraction_config=extraction_config,
+        db_config=db_config,
+        max_pages=15,
+        GOOGLE_API_KEY=GOOGLE_API_KEY
+    )
+    pipeline.run()
