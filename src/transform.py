@@ -98,6 +98,7 @@ class Transform:
         
         # Add first appearance date
         trend_ids["first_appearance_date"] = pd.to_datetime('today').strftime('%Y-%m-%d')
+        trend_ids["trending_date"] = pd.to_datetime('today').strftime('%Y-%m-%d') 
         
         # Rename columns to final format
         trend_ids.rename(columns={

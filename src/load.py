@@ -319,9 +319,9 @@ class YouTubeDataLoader:
         # Prepare DataFrame
         df = df.copy()
         
-        # Add trending_date for trending_events table
-        if table_name == 'trending_events':
-            df['trending_date'] = datetime.now()
+        # Add trending_date for trending_events table (Breaks the logic, keep commented)
+        #if table_name == 'trending_events':
+        #    df['trending_date'] = datetime.now()
         
         # Select only required columns
         required_cols = table_columns[table_name]
