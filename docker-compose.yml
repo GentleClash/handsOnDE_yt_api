@@ -13,7 +13,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init-db:/docker-entrypoint-initdb.d
+      - ./init-db:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d youtube_analytics"]
       interval: 10s
@@ -62,6 +62,7 @@ services:
       - ./src/extraction_config.json:/app/src/extraction_config.json
     environment:
       - PYTHONPATH=/app
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
     depends_on:
       postgres:
         condition: service_healthy
