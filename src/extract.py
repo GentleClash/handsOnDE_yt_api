@@ -193,7 +193,7 @@ class Extract:
 
     def extract_all(self, save_dir : Optional[str] = None) -> Dict[str, Any]:
         """
-        Complete extraction process: get trending videos and their detailed information.
+        Complete extraction process: get trending videos and their detailed information. It saves the results to the specified directory.
 
         Args:
             save_dir (Optional[str]): Directory to save the extraction results. <mark style="background-color: #FF0000;">CAUTION: This overrides the self.DIR</mark>
