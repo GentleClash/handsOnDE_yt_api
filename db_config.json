@@ -1,0 +1,1 @@
+{"host":"postgres","port":"5432","dbname":"youtube_analytics","user":"postgres","password":"password"}
