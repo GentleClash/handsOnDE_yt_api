@@ -2,6 +2,7 @@
 
 # load.py
 
+import os
 import pandas as pd
 import psycopg as pg
 from pathlib import Path
@@ -477,11 +478,17 @@ if __name__ == "__main__":
     ]
     
     import json
-    with open("db_config.json") as f:
-        custom_db_config = json.load(f)
+    try:
+        with open("db_config.json") as f:
+            custom_db_config = json.load(f)
+    except FileNotFoundError:
+        logger.error("Database configuration file not found.")
+        from dotenv import load_dotenv
+        load_dotenv()
+        db_config = json.loads(os.getenv("DB_CONFIG")) #type: ignore
 
     advanced_loader = YouTubeDataLoader(
-        db_config=custom_db_config,
+        db_config=db_config,
         preprocessors=custom_preprocessors
     )
     

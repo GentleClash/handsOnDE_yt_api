@@ -72,6 +72,8 @@ class YoutubeETLPipeline:
 
 
 if __name__ == "__main__":
+    import argparse
+
     from dotenv import load_dotenv
     load_dotenv()
 
@@ -82,7 +84,7 @@ if __name__ == "__main__":
             extraction_config = json.load(f)
     except FileNotFoundError:
         print("Extraction configuration file not found.")
-        exit()
+        extraction_config = json.loads(os.getenv("EXTRACTION_CONFIG", "{}"))
 
     db_config = None
     try:
@@ -90,7 +92,7 @@ if __name__ == "__main__":
             db_config = json.load(f)
     except FileNotFoundError:
         print("Database configuration file not found.")
-        exit()
+        db_config = json.loads(os.getenv("DB_CONFIG", "{}"))
 
 
     GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
@@ -98,10 +100,14 @@ if __name__ == "__main__":
         print("GOOGLE_API_KEY environment variable not set.")
         exit()
 
+    parser = argparse.ArgumentParser(description="YouTube ETL Pipeline")
+    parser.add_argument("--max_pages", type=int, default=15, help="Maximum number of pages to extract")
+    args = parser.parse_args()
+
     pipeline = YoutubeETLPipeline(
         extraction_config=extraction_config,
         db_config=db_config,
-        max_pages=15,
+        max_pages=args.max_pages,
         GOOGLE_API_KEY=GOOGLE_API_KEY
     )
     pipeline.run()

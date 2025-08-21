@@ -79,7 +79,8 @@ python main.py
 - [x] Extract
 - [x] Transform
 - [x] Basic Load
-- [x] Dashboard (engagement rate WIP)
+- [x] Dashboard
+- [x] Containerization
 - [ ] Time Series Analysis
 - [ ] Categorical Analysis
 - [ ] Channel Analysis
