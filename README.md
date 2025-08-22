@@ -97,4 +97,4 @@ Contributions, issues, and feature requests are welcome! Please open an issue or
 This project is licensed under the terms of the [GNU GPLv3](LICENSE).
 
 ---
-*Part of a series of personal projects to build hands-on data engineering skills in ETL and ELT workflows.*
+*Part of a series of personal projects to build hands-on data engineering skills in ETL and ELT workflows*
