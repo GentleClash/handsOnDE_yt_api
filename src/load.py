@@ -7,7 +7,6 @@ import pandas as pd
 import psycopg as pg
 from pathlib import Path
 from typing import Optional, Literal, List, Dict, Union, Tuple
-from datetime import datetime
 import logging
 from abc import ABC, abstractmethod
 import re
@@ -314,15 +313,39 @@ class YouTubeDataLoader:
         table_columns = {
             'trending_events': ["video_id", "trending_date", "first_appearance_date", "view_count"],
             'videos': ["id", "title", "published_at", "channel_id", "channel_title", 
-                  "category_id", "duration", "view_count", "like_count", "comment_count"]
+                "category_id", "duration", "view_count", "like_count", "comment_count"]
         }
 
         # Prepare DataFrame
         df = df.copy()
         
-        # Add trending_date for trending_events table (Breaks the logic, keep commented)
-        #if table_name == 'trending_events':
-        #    df['trending_date'] = datetime.now()
+        # SPECIAL HANDLING FOR TRENDING_EVENTS: Query existing first_appearance_dates
+        if table_name == 'trending_events':
+            # Get existing first_appearance_dates for videos in this batch
+            video_ids = df['video_id'].unique().tolist()
+            
+            if video_ids:
+                existing_dates = {}
+                query_text = """
+                SELECT video_id, MIN(first_appearance_date) as earliest_date
+                FROM trending_events 
+                WHERE video_id = %s
+                GROUP BY video_id
+                """
+                
+                with conn.cursor() as cur:
+                    for video_id in video_ids:
+                        cur.execute(query_text, (video_id,))
+                        result = cur.fetchone()
+                        if result:
+                            existing_dates[result[0]] = result[1]
+                
+                # Update first_appearance_date in DataFrame with existing dates where available
+                df['first_appearance_date'] = df.apply(
+                    lambda row: existing_dates.get(row['video_id'], row['first_appearance_date']), 
+                    axis=1
+                )
+                logger.info(f"Updated first_appearance_date for {len(existing_dates)} existing videos")
         
         # Select only required columns
         required_cols = table_columns[table_name]
@@ -335,7 +358,7 @@ class YouTubeDataLoader:
         
         # Convert to list of tuples for insertion
         values = [tuple(None if pd.isna(val) or val is pd.NaT else val for val in row) 
-             for row in df_clean.values]
+                                                for row in df_clean.values]
 
         # Prepare SQL components
         columns = list(df.columns)
@@ -438,7 +461,7 @@ class ViewCountFilterPreprocessor(DataPreprocessor):
 class CategoryMappingPreprocessor(DataPreprocessor):
     """Map category IDs to category names."""
     
-    def __init__(self):
+    def __init__(self) -> None:
         # YouTube category ID mappings (subset)
         self.category_mapping = {
             '1': 'Film & Animation',
