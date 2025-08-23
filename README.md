@@ -15,7 +15,7 @@
 - **Extract:** Pull data from the YouTube API.
 - **Transform:** Clean and reshape raw YouTube data for downstream use.
 - **Basic Load:** Save transformed data to local or cloud storage.
-- **Dashboard:** Visualize YouTube metrics; engagement rate dashboard is in progress.
+- **Dashboard:** Visualize YouTube metrics.
 - **Planned Enhancements:**
   - Time Series Analysis
   - Categorical Analysis

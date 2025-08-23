@@ -1,12 +1,17 @@
 import json
+import os
 import streamlit as st
 import pyarrow as pa
 import pandas as pd
 import psycopg as pg
 import plotly.express as px
 from datetime import datetime
-from typing import Tuple, Dict
+from typing import Optional, Tuple, Dict
 import warnings
+from main import YoutubeETLPipeline
+from dotenv import load_dotenv
+import time
+load_dotenv()
 warnings.filterwarnings('ignore')
 
 # Configure Streamlit page
@@ -439,11 +444,84 @@ def main() -> None:
     # Footer
     st.markdown("---")
     st.markdown("### 🔄 Data Refresh")
-    if st.button("Refresh Data"):
-        st.cache_data.clear()
-        # To Do
-        # Execute the ETL pipeline then rerun
-        st.rerun()
+    
+    # Check if ETL can be run (rate limiting)
+    def can_run_etl() -> bool:
+        """Check if ETL pipeline can be run based on rate limiting"""
+        
+        # Use session state to track ETL runs
+        if 'etl_runs' not in st.session_state:
+            st.session_state.etl_runs = []
+        
+        current_time = time.time()
+        hour_ago = current_time - 3600
+        
+        # Remove runs older than 1 hour
+        st.session_state.etl_runs = [run_time for run_time in st.session_state.etl_runs if run_time > hour_ago]
+        
+        # Check if we can run (less than 3 runs in the last hour)
+        return len(st.session_state.etl_runs) < 3
+
+    def get_next_available_time() -> Optional[datetime]:
+        """Get the next time when ETL can be run"""
+        if 'etl_runs' not in st.session_state or not st.session_state.etl_runs:
+            return None
+        
+        oldest_run = min(st.session_state.etl_runs)
+        next_available = oldest_run + 3600  # 1 hour after oldest run
+        return datetime.fromtimestamp(next_available)
+    
+    if can_run_etl():
+        if st.button("Refresh Data"):
+            
+            # Add current time to ETL runs
+            st.session_state.etl_runs.append(time.time())
+            
+            st.cache_data.clear()
+            GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+            
+            with st.spinner("Running ETL pipeline... This may take a few minutes."):
+                try:
+                    with open("src/extraction_config.json") as f:
+                        extraction_config = json.load(f)
+                except FileNotFoundError:
+                    print("Extraction configuration file not found.")
+                    extraction_config = json.loads(os.getenv("EXTRACTION_CONFIG", "{}"))
+
+                db_config = None
+                try:
+                    with open("db_config.json") as f:
+                        db_config = json.load(f)
+                except FileNotFoundError:
+                    print("Database configuration file not found.")
+                    db_config = json.loads(os.getenv("DB_CONFIG", "{}"))
+                except json.JSONDecodeError:
+                    print("Error decoding JSON from database configuration.")
+                    db_config = json.loads(os.getenv("DB_CONFIG", "{}"))
+
+                if not GOOGLE_API_KEY:
+                    st.error("GOOGLE_API_KEY environment variable not set.")
+                else:
+                    etl_pipeline = YoutubeETLPipeline(
+                        extraction_config=extraction_config,
+                        db_config=db_config,
+                        GOOGLE_API_KEY=GOOGLE_API_KEY,
+                        max_pages=20
+                    )
+                    etl_pipeline.run()
+                    st.success("Data refresh completed successfully!")
+            
+            st.rerun()
+    else:
+        # Show disabled button and next available time
+        st.button("Refresh Data", disabled=True)
+        remaining_runs = 3 - len(st.session_state.etl_runs)
+        next_time = get_next_available_time()
+        
+        if next_time:
+            st.warning(f"⏰ Rate limit reached. Next refresh available at {next_time.strftime('%H:%M:%S')}")
+        else:
+            st.info(f"{remaining_runs} refresh(es) remaining this hour")
     
     st.markdown(f"*Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*")
 
