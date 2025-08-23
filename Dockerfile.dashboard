@@ -2,9 +2,9 @@ FROM python:3.13.5-slim
 
 WORKDIR /app
 
-# Install system dependencies
 RUN apt-get update && apt-get install -y \
     gcc \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements file
@@ -18,8 +18,10 @@ COPY dashboard.py .
 COPY src/ ./src/
 
 # Create non-root user for security
-RUN useradd --create-home --shell /bin/bash app && chown -R app:app /app
-USER app
+RUN useradd --create-home --shell /bin/bash --uid 1001 streamlit && \
+    chown -R streamlit:streamlit /app
+
+USER streamlit
 
 # Expose Streamlit default port
 EXPOSE 8501

@@ -1,11 +1,11 @@
 FROM python:3.13.5-slim
 
-# Set working directory
 WORKDIR /app
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     gcc \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements file
@@ -21,12 +21,8 @@ COPY src/ ./src/
 # Create directories for data
 RUN mkdir -p /app/data/raw/extract /app/data/processed
 
-# Create non-root user for security
-RUN useradd --create-home --shell /bin/bash app && chown -R app:app /app
-USER app
-
 # Set Python path
 ENV PYTHONPATH=/app
 
 # Default command
-CMD ["python", "main.py", "--max_pages", "15"]
+CMD ["python", "main.py", "--max_pages", "20"]

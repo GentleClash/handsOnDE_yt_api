@@ -7,7 +7,7 @@ services:
     environment:
       POSTGRES_DB: youtube_analytics
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=scram-sha-256"
     ports:
       - "5432:5432"
@@ -22,12 +22,14 @@ services:
     networks:
       - youtube_analytics_network
 
+  # ETL Job
   etl:
     build:
       context: .
       dockerfile: Dockerfile.etl
     container_name: youtube_analytics_etl
     restart: "no"  
+    user: "0:0"  # Run as root 
     volumes:
       - ./src:/app/src
       - ./data:/app/data
@@ -53,22 +55,32 @@ services:
     ports:
       - "8501:8501"
     volumes:
-      - ./dashboard.py:/app/dashboard.py
+      - ./dashboard.py:/app/dashboard.py:ro  # Read-only mount
       - ./data:/app/data
-      - ./src:/app/src
-      - ./db_config.json:/app/db_config.json
+      - ./src:/app/src:ro                    # Read-only mount
+      - ./db_config.json:/app/db_config.json:ro  # Read-only mount
     environment:
       - STREAMLIT_SERVER_PORT=8501
       - STREAMLIT_SERVER_ADDRESS=0.0.0.0
       - STREAMLIT_SERVER_HEADLESS=true
       - STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
+      - STREAMLIT_SERVER_MAX_UPLOAD_SIZE=200
+      - STREAMLIT_SERVER_ENABLE_CORS=true
+      - STREAMLIT_SERVER_ENABLE_XSRF_PROTECTION=false
+      - STREAMLIT_SERVER_ALLOW_RUN_ON_SAVE=false
     depends_on:
       postgres:
         condition: service_healthy
       etl:
-        condition: service_completed_successfully  # Wait for ETL to complete
+        condition: service_completed_successfully
     networks:
       - youtube_analytics_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
 volumes:
   postgres_data:
